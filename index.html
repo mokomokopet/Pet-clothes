@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOKO MOKO 寵物手作 - 線上即時搭配器</title>
+    <style>
+        * { box-sizing: border-box; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; }
+        body { margin: 0; padding: 20px; background: #faf7f2; color: #4a4a4a; }
+        .container { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        
+        /* 預覽區塊 */
+        .preview-box { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; position: sticky; top: 20px; }
+        .preview-box svg { width: 100%; max-width: 320px; height: auto; }
+        
+        /* 操作面板區塊 */
+        .control-box { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .section-title { font-weight: bold; margin: 15px 0 8px; color: #8b5e3c; border-bottom: 2px solid #f0e6df; padding-bottom: 5px; }
+        
+        /* 選項按鈕列表 */
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .btn-option { border: 2px solid #eee; border-radius: 8px; padding: 8px; background: white; cursor: pointer; text-align: center; font-size: 13px; transition: all 0.2s; }
+        .btn-option.active { border-color: #d98880; background-color: #fdf2f2; color: #d98880; font-weight: bold; }
+        
+        /* 布料縮圖選單 */
+        .fabric-swatch { width: 100%; height: 50px; border-radius: 6px; background-size: cover; background-position: center; margin-bottom: 4px; border: 1px solid #ddd; }
+        
+        .summary-box { background: #fdf8f5; border: 1px dashed #d98880; padding: 12px; border-radius: 8px; margin-top: 15px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<h2 style="text-align: center; color: #8b5e3c;">🐾 MOKO MOKO 配色模擬器</h2>
+
+<div class="container">
+    <!-- 左側：即時 SVG 向量預覽區 -->
+    <div class="preview-box">
+        <h3>搭配預覽</h3>
+        <svg viewBox="0 0 300 300" id="pet-svg">
+            <defs>
+                <!-- 動態注入的布料 Pattern 遮罩區 -->
+                <pattern id="pat-main" patternUnits="userSpaceOnUse" width="60" height="60">
+                    <image id="img-main" href="" width="60" height="60" preserveAspectRatio="xMidYMid slice" />
+                </pattern>
+                <pattern id="pat-accent" patternUnits="userSpaceOnUse" width="60" height="60">
+                    <image id="img-accent" href="" width="60" height="60" preserveAspectRatio="xMidYMid slice" />
+                </pattern>
+                <pattern id="pat-bow" patternUnits="userSpaceOnUse" width="60" height="60">
+                    <image id="img-bow" href="" width="60" height="60" preserveAspectRatio="xMidYMid slice" />
+                </pattern>
+            </defs>
+            
+            <!-- 示意向量圖案 (可更換為您實際造型的 SVG 路徑) -->
+            <g id="style-bandana">
+                <!-- 部位 1: 領巾主體 -->
+                <path d="M 50,80 Q 150,130 250,80 L 150,260 Z" fill="url(#pat-main)" stroke="#4a4a4a" stroke-width="3" />
+                <!-- 部位 2: 領口滾邊 -->
+                <path d="M 50,80 Q 150,130 250,80 L 250,60 Q 150,110 50,60 Z" fill="url(#pat-accent)" stroke="#4a4a4a" stroke-width="3" />
+                <!-- 部位 3: 蝴蝶結配件 -->
+                <circle cx="150" cy="85" r="18" fill="url(#pat-bow)" stroke="#4a4a4a" stroke-width="3" />
+            </g>
+        </svg>
+
+        <div class="summary-box">
+            <strong>目前搭配方案：</strong><br>
+            • 款式：<span id="txt-style">水手風領巾</span><br>
+            • 主體布料：<span id="txt-main">未選擇</span><br>
+            • 滾邊布料：<span id="txt-accent">未選擇</span><br>
+            • 配件布料：<span id="txt-bow">未選擇</span>
+        </div>
+    </div>
+
+    <!-- 右側：顧客點選控制面板 -->
+    <div class="control-box">
+        <!-- 1. 選擇造型 -->
+        <div class="section-title">Step 1: 選擇造型款式 (共20款)</div>
+        <div class="options-grid" id="style-selector"></div>
+
+        <!-- 2. 選擇部位 -->
+        <div class="section-title">Step 2: 選擇調整部位</div>
+        <div class="options-grid" id="part-selector">
+            <button class="btn-option active" onclick="selectPart('main')">領巾主體</button>
+            <button class="btn-option" onclick="selectPart('accent')">領口滾邊</button>
+            <button class="btn-option" onclick="selectPart('bow')">蝴蝶結配件</button>
+        </div>
+
+        <!-- 3. 選擇布料 -->
+        <div class="section-title">Step 3: 選擇布款圖片 (共30+款)</div>
+        <div class="options-grid" id="fabric-selector"></div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 💡 你只需要在這裡更新你的款式與布料資料庫！
+    // ==========================================
+    
+    // 20 種款式清單
+    const styles = [
+        { id: 'bandana', name: '水手風領巾' },
+        { id: 'bib', name: '日系蕾絲圍兜' },
+        { id: 'kimono', name: '和風和服領' },
+        { id: 'vest', name: '保暖小背心' }
+        // ...你可以在這裡繼續新增到20種
+    ];
+
+    // 30+ 種布料清單 (請直接替換為你的布料照片 URL)
+    const fabrics = [
+        { id: 'f1', name: '櫻花粉花', img: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=150' },
+        { id: 'f2', name: '北歐藍格', img: 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=150' },
+        { id: 'f3', name: '明亮黃水玉', img: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=150' },
+        { id: 'f4', name: '復古綠葉', img: 'https://images.unsplash.com/photo-1508615039623-a25605d2b022?w=150' }
+        // ...在這裡繼續貼上你的30幾款布料圖片網址
+    ];
+
+    // 當前選擇狀態
+    let currentPart = 'main';
+    let currentSelections = {
+        style: styles[0].name,
+        main: fabrics[0],
+        accent: fabrics[1] || fabrics[0],
+        bow: fabrics[2] || fabrics[0]
+    };
+
+    // 初始化渲染選單
+    function init() {
+        // 渲染款式按鈕
+        const styleBox = document.getElementById('style-selector');
+        styles.forEach((s, idx) => {
+            const btn = document.createElement('button');
+            btn.className = `btn-option ${idx === 0 ? 'active' : ''}`;
+            btn.innerText = s.name;
+            btn.onclick = () => {
+                document.querySelectorAll('#style-selector .btn-option').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentSelections.style = s.name;
+                document.getElementById('txt-style').innerText = s.name;
+            };
+            styleBox.appendChild(btn);
+        });
+
+        // 渲染布料選項
+        const fabricBox = document.getElementById('fabric-selector');
+        fabrics.forEach(f => {
+            const item = document.createElement('div');
+            item.className = 'btn-option';
+            item.innerHTML = `<div class="fabric-swatch" style="background-image:url('${f.img}')"></div><div>${f.name}</div>`;
+            item.onclick = () => applyFabric(f);
+            fabricBox.appendChild(item);
+        });
+
+        // 預設套用布料
+        applyFabricToPart('main', currentSelections.main);
+        applyFabricToPart('accent', currentSelections.accent);
+        applyFabricToPart('bow', currentSelections.bow);
+    }
+
+    // 切換當前要塗色的部位
+    function selectPart(part) {
+        currentPart = part;
+        document.querySelectorAll('#part-selector .btn-option').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    // 將點選的布料套用到目前部位
+    function applyFabric(fabric) {
+        currentSelections[currentPart] = fabric;
+        applyFabricToPart(currentPart, fabric);
+    }
+
+    function applyFabricToPart(part, fabric) {
+        document.getElementById(`img-${part}`).setAttribute('href', fabric.img);
+        document.getElementById(`txt-${part}`).innerText = fabric.name;
+    }
+
+    // 啟動程式
+    init();
+</script>
+
+</body>
+</html>
